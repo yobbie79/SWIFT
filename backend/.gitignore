@@ -1,7 +1,8 @@
-# compiled output
+# Compiled output
 /dist
 /node_modules
 /build
+*.tsbuildinfo
 
 # Logs
 logs
@@ -12,14 +13,15 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-# OS
+# OS / System Files
 .DS_Store
+Thumbs.db
 
-# Tests
+# Testing
 /coverage
 /.nyc_output
 
-# IDEs and editors
+# IDEs and Editors
 /.idea
 .project
 .classpath
@@ -28,29 +30,27 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
-# IDE - VSCode
+# VS Code
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
+# Environment Variables & Secrets
 .env
+.env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
 
-# temp directory
+# Temp Directories & Runtime Data
 .temp
 .tmp
-
-# Runtime data
 pids
 *.pid
 *.seed
 *.pid.lock
 
-# Diagnostic reports (https://nodejs.org/api/report.html)
+# Node Diagnostic Reports
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
