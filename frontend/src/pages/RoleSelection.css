@@ -1,0 +1,44 @@
+.role-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.role-content {
+  width: 100%;
+  max-width: 500px;
+  padding: 30px;
+}
+
+.role-content h1 {
+  font-size: 42px;
+  margin-bottom: 16px;
+}
+
+.role-content p {
+  font-size: 18px;
+  margin-bottom: 30px;
+}
+
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.role-list button {
+  padding: 14px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.back-button {
+  margin-top: 25px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}

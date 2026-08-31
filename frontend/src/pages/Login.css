@@ -1,0 +1,44 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 30px;
+}
+
+.login-card h1 {
+  margin-bottom: 25px;
+}
+
+.login-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-card label {
+  text-align: left;
+  font-weight: bold;
+}
+
+.login-card input {
+  padding: 12px;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.login-card button {
+  padding: 12px;
+  cursor: pointer;
+}
+
+.login-card .back-button {
+  margin-top: 15px;
+  background: none;
+  border: none;
+}
