@@ -1,31 +1,84 @@
 .welcome-page {
   min-height: 100vh;
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  text-align: center;
+  box-sizing: border-box;
+  padding: 40px 24px;
+  /* Dark overlay combined with background image for text legibility */
+  background: 
+    linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 58, 138, 0.75)),
+    url('https://images.unsplash.com/photo-1556742049-0a67e076634c?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
 }
 
 .welcome-content {
   width: 100%;
-  max-width: 500px;
-  padding: 30px;
+  max-width: 850px;
+  padding: 80px 60px;
+  box-sizing: border-box;
+  text-align: center;
+  color: white;
 }
 
 .welcome-content h1 {
-  font-size: 64px;
-  margin-bottom: 16px;
+  margin: 0 0 20px;
+  font-size: 88px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  line-height: 1;
 }
 
 .welcome-content p {
-  font-size: 20px;
-  margin-bottom: 32px;
+  margin: 0 auto 45px;
+  max-width: 600px;
+  font-size: 22px;
+  line-height: 1.6;
+  color: #dbeafe;
 }
 
 .welcome-content button {
-  padding: 12px 28px;
-  font-size: 16px;
+  padding: 17px 42px;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
+  background: white;
+  color: #1d4ed8;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.welcome-content button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+}
+
+.welcome-content button:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 700px) {
+  .welcome-page {
+    padding: 24px 16px;
+  }
+
+  .welcome-content {
+    padding: 50px 20px;
+  }
+
+  .welcome-content h1 {
+    font-size: 58px;
+    letter-spacing: 5px;
+  }
+
+  .welcome-content p {
+    font-size: 18px;
+  }
+
+  .welcome-content button {
+    width: 100%;
+    max-width: 300px;
+  }
 }

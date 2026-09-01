@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import './RetailerDashboard.css'
 
 function RetailerDashboard() {
   const [formData, setFormData] = useState({
@@ -82,89 +83,223 @@ function RetailerDashboard() {
     }
   }
 
+  const totalRequests = deliveries.length
+  const pendingRequests = deliveries.filter(
+    (delivery) => delivery.status === 'PENDING'
+  ).length
+  const inTransitRequests = deliveries.filter(
+    (delivery) => delivery.status === 'IN_TRANSIT'
+  ).length
+  const deliveredRequests = deliveries.filter(
+    (delivery) => delivery.status === 'DELIVERED'
+  ).length
+
   return (
-    <main>
-      <h1>Retailer Dashboard</h1>
-      <p>Manage your delivery requests.</p>
+    <main className="retailer-page">
+      <header className="retailer-header">
+        <div>
+          <p className="retailer-brand">SWIFT</p>
+          <h1>Retailer Dashboard</h1>
+          <p className="retailer-subtitle">
+            Manage your delivery requests in one place.
+          </p>
+        </div>
 
-      <section>
-        <h2>Create Delivery Request</h2>
+        <div className="retailer-status">
+          <span className="status-dot"></span>
+          System Online
+        </div>
+      </header>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            name="customerName"
-            type="text"
-            placeholder="Customer name"
-            value={formData.customerName}
-            onChange={handleChange}
-            required
-          />
+      <section className="stats-grid">
+        <div className="stat-card">
+          <span className="stat-icon">📦</span>
+          <div>
+            <p>Total Requests</p>
+            <strong>{totalRequests}</strong>
+          </div>
+        </div>
 
-          <input
-            name="customerPhone"
-            type="tel"
-            placeholder="Customer phone"
-            value={formData.customerPhone}
-            onChange={handleChange}
-            required
-          />
+        <div className="stat-card">
+          <span className="stat-icon">⏳</span>
+          <div>
+            <p>Pending</p>
+            <strong>{pendingRequests}</strong>
+          </div>
+        </div>
 
-          <input
-            name="deliveryAddress"
-            type="text"
-            placeholder="Delivery address"
-            value={formData.deliveryAddress}
-            onChange={handleChange}
-            required
-          />
+        <div className="stat-card">
+          <span className="stat-icon">🚚</span>
+          <div>
+            <p>In Transit</p>
+            <strong>{inTransitRequests}</strong>
+          </div>
+        </div>
 
-          <input
-            name="itemDescription"
-            type="text"
-            placeholder="Item description"
-            value={formData.itemDescription}
-            onChange={handleChange}
-            required
-          />
-
-          <button type="submit" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Request'}
-          </button>
-        </form>
-
-        {message && <p>{message}</p>}
-        {error && <p>{error}</p>}
+        <div className="stat-card">
+          <span className="stat-icon">✓</span>
+          <div>
+            <p>Delivered</p>
+            <strong>{deliveredRequests}</strong>
+          </div>
+        </div>
       </section>
 
-      <section>
-        <h2>Recent Delivery Requests</h2>
+      <section className="dashboard-grid">
+        <div className="request-card">
+          <div className="section-heading">
+            <div>
+              <h2>Create Delivery Request</h2>
+              <p>Enter the customer's delivery details below.</p>
+            </div>
+            <span className="heading-icon">＋</span>
+          </div>
+
+          <form onSubmit={handleSubmit} className="delivery-form">
+            <div className="form-group">
+              <label htmlFor="customerName">Customer Name</label>
+              <input
+                id="customerName"
+                name="customerName"
+                type="text"
+                placeholder="Enter customer name"
+                value={formData.customerName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="customerPhone">Customer Phone</label>
+              <input
+                id="customerPhone"
+                name="customerPhone"
+                type="tel"
+                placeholder="e.g. 0712 345 678"
+                value={formData.customerPhone}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group full-width">
+              <label htmlFor="deliveryAddress">Delivery Address</label>
+              <input
+                id="deliveryAddress"
+                name="deliveryAddress"
+                type="text"
+                placeholder="Enter delivery address"
+                value={formData.deliveryAddress}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group full-width">
+              <label htmlFor="itemDescription">Item Description</label>
+              <input
+                id="itemDescription"
+                name="itemDescription"
+                type="text"
+                placeholder="What is being delivered?"
+                value={formData.itemDescription}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="create-button"
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create Delivery Request'}
+            </button>
+          </form>
+
+          {message && <div className="success-message">✓ {message}</div>}
+          {error && <div className="error-message">⚠ {error}</div>}
+        </div>
+
+        <div className="info-card">
+          <div className="info-icon">🚀</div>
+          <h2>Deliver with SWIFT</h2>
+          <p>
+            Create a request and let your dispatcher coordinate the delivery
+            with an available rider.
+          </p>
+
+          <div className="info-steps">
+            <div>
+              <span>1</span>
+              <p>Create request</p>
+            </div>
+
+            <div>
+              <span>2</span>
+              <p>Rider assigned</p>
+            </div>
+
+            <div>
+              <span>3</span>
+              <p>Track delivery</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="recent-card">
+        <div className="section-heading">
+          <div>
+            <h2>Recent Delivery Requests</h2>
+            <p>Overview of your latest delivery activity.</p>
+          </div>
+
+          <span className="request-count">
+            {deliveries.length} {deliveries.length === 1 ? 'Request' : 'Requests'}
+          </span>
+        </div>
 
         {deliveries.length === 0 ? (
-          <p>No delivery requests yet.</p>
+          <div className="empty-state">
+            <div>📭</div>
+            <h3>No delivery requests yet</h3>
+            <p>Create your first delivery request using the form above.</p>
+          </div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Phone</th>
-                <th>Address</th>
-                <th>Item</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {deliveries.map((delivery) => (
-                <tr key={delivery.id}>
-                  <td>{delivery.customerName}</td>
-                  <td>{delivery.customerPhone}</td>
-                  <td>{delivery.deliveryAddress}</td>
-                  <td>{delivery.itemDescription}</td>
-                  <td>{delivery.status}</td>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Phone</th>
+                  <th>Address</th>
+                  <th>Item</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {deliveries.map((delivery) => (
+                  <tr key={delivery.id}>
+                    <td className="customer-cell">
+                      {delivery.customerName}
+                    </td>
+                    <td>{delivery.customerPhone}</td>
+                    <td>{delivery.deliveryAddress}</td>
+                    <td>{delivery.itemDescription}</td>
+                    <td>
+                      <span
+                        className={`delivery-status status-${delivery.status?.toLowerCase()}`}
+                      >
+                        {delivery.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

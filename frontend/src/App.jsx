@@ -6,57 +6,60 @@ import RetailerDashboard from './pages/RetailerDashboard'
 import DispatcherDashboard from './pages/DispatcherDashboard'
 import RiderDashboard from './pages/RiderDashboard'
 
-function App() {
-  const [page, setPage] = useState('welcome')
-  const [role, setRole] = useState('')
+const ROLE_DASHBOARDS = {
+  RETAILER: 'retailer-dashboard',
+  DISPATCHER: 'dispatcher-dashboard',
+  RIDER: 'rider-dashboard',
+}
 
-  const handleRoleSelect = (selectedRole) => {
-    setRole(selectedRole)
+export default function App() {
+  const [page, setPage] = useState('welcome')
+  const [selectedRole, setSelectedRole] = useState('')
+  const [user, setUser] = useState(null)
+
+  const handleRoleSelect = (role) => {
+    setSelectedRole(role)
     setPage('login')
   }
 
-  const handleLogin = () => {
-    if (role === 'Retailer') {
-      setPage('retailer-dashboard')
-    } else if (role === 'Dispatcher') {
-      setPage('dispatcher-dashboard')
-    } else if (role === 'Rider') {
-      setPage('rider-dashboard')
+  const handleLogin = (loggedInUser) => {
+    if (!loggedInUser) return
+
+    setUser(loggedInUser)
+
+    const targetDashboard = ROLE_DASHBOARDS[loggedInUser.role]
+    if (targetDashboard) {
+      setPage(targetDashboard)
     }
   }
 
-  if (page === 'roles') {
-    return (
-      <RoleSelection
-        onSelectRole={handleRoleSelect}
-        onBack={() => setPage('welcome')}
-      />
-    )
+  const renderPage = () => {
+    switch (page) {
+      case 'roles':
+        return (
+          <RoleSelection
+            onSelectRole={handleRoleSelect}
+            onBack={() => setPage('welcome')}
+          />
+        )
+      case 'login':
+        return (
+          <Login
+            role={selectedRole}
+            onLogin={handleLogin}
+            onBack={() => setPage('roles')}
+          />
+        )
+      case 'retailer-dashboard':
+        return <RetailerDashboard user={user} />
+      case 'dispatcher-dashboard':
+        return <DispatcherDashboard user={user} />
+      case 'rider-dashboard':
+        return <RiderDashboard user={user} />
+      default:
+        return <Welcome onGetStarted={() => setPage('roles')} />
+    }
   }
 
-  if (page === 'login') {
-    return (
-      <Login
-        role={role}
-        onLogin={handleLogin}
-        onBack={() => setPage('roles')}
-      />
-    )
-  }
-
-  if (page === 'retailer-dashboard') {
-    return <RetailerDashboard />
-  }
-
-  if (page === 'dispatcher-dashboard') {
-    return <DispatcherDashboard />
-  }
-
-  if (page === 'rider-dashboard') {
-    return <RiderDashboard />
-  }
-
-  return <Welcome onGetStarted={() => setPage('roles')} />
+  return renderPage()
 }
-
-export default App

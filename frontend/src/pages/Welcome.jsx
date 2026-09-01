@@ -1,6 +1,6 @@
 import './Welcome.css'
 
-function Welcome({ onGetStarted }) {
+export default function Welcome({ onGetStarted }) {
   return (
     <main className="welcome-page">
       <div className="welcome-content">
@@ -14,5 +14,3 @@ function Welcome({ onGetStarted }) {
     </main>
   )
 }
-
-export default Welcome
