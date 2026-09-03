@@ -1,42 +1,53 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './RetailerDashboard.css'
 
-function RetailerDashboard() {
-  const [formData, setFormData] = useState({
-    customerName: '',
-    customerPhone: '',
-    deliveryAddress: '',
-    itemDescription: '',
-  })
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
+const INITIAL_FORM_DATA = {
+  customerName: '',
+  customerPhone: '',
+  deliveryAddress: '',
+  itemDescription: '',
+}
+
+export default function RetailerDashboard({ user }) {
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
   const [deliveries, setDeliveries] = useState([])
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
 
-  const loadDeliveries = async () => {
+  const loadDeliveries = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/deliveries')
+      setError('')
+      const response = await fetch(`${API_URL}/deliveries`)
 
       if (!response.ok) {
-        throw new Error('Failed to load deliveries')
+        throw new Error(`HTTP error: ${response.status}`)
       }
 
       const data = await response.json()
-      setDeliveries(data)
+      // Filter by logged-in retailer if retailerId exists on entity
+      const retailerDeliveries = user?.id
+        ? data.filter((item) => !item.retailerId || item.retailerId === user.id)
+        : data
+
+      setDeliveries(retailerDeliveries)
     } catch (err) {
-      console.error(err)
+      console.error('Error fetching deliveries:', err)
       setError('Could not load delivery requests.')
+    } finally {
+      setIsFetching(false)
     }
-  }
+  }, [user?.id])
 
   useEffect(() => {
     loadDeliveries()
-  }, [])
+  }, [loadDeliveries])
 
   const handleChange = (event) => {
     const { name, value } = event.target
-
     setFormData((current) => ({
       ...current,
       [name]: value,
@@ -45,54 +56,52 @@ function RetailerDashboard() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-
     setMessage('')
     setError('')
     setLoading(true)
 
+    const payload = {
+      ...formData,
+      ...(user?.id && { retailerId: user.id }),
+    }
+
     try {
-      const response = await fetch('http://localhost:3000/deliveries', {
+      const response = await fetch(`${API_URL}/deliveries`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create delivery request')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to create delivery request')
       }
 
       const delivery = await response.json()
 
       setMessage('Delivery request created successfully!')
-
-      setFormData({
-        customerName: '',
-        customerPhone: '',
-        deliveryAddress: '',
-        itemDescription: '',
-      })
-
+      setFormData(INITIAL_FORM_DATA)
       setDeliveries((current) => [delivery, ...current])
     } catch (err) {
-      console.error(err)
-      setError('Could not create delivery request. Please try again.')
+      console.error('Error creating delivery:', err)
+      setError(err.message || 'Could not create delivery request. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  const totalRequests = deliveries.length
-  const pendingRequests = deliveries.filter(
-    (delivery) => delivery.status === 'PENDING'
-  ).length
-  const inTransitRequests = deliveries.filter(
-    (delivery) => delivery.status === 'IN_TRANSIT'
-  ).length
-  const deliveredRequests = deliveries.filter(
-    (delivery) => delivery.status === 'DELIVERED'
-  ).length
+  const stats = useMemo(() => {
+    const total = deliveries.length
+    const pending = deliveries.filter((d) => d.status === 'PENDING').length
+    const inTransit = deliveries.filter(
+      (d) => d.status === 'IN_TRANSIT' || d.status === 'PICKED_UP'
+    ).length
+    const delivered = deliveries.filter((d) => d.status === 'DELIVERED').length
+
+    return { total, pending, inTransit, delivered }
+  }, [deliveries])
 
   return (
     <main className="retailer-page">
@@ -101,7 +110,7 @@ function RetailerDashboard() {
           <p className="retailer-brand">SWIFT</p>
           <h1>Retailer Dashboard</h1>
           <p className="retailer-subtitle">
-            Manage your delivery requests in one place.
+            {user?.name ? `Welcome back, ${user.name}. ` : ''}Manage your delivery requests in one place.
           </p>
         </div>
 
@@ -116,7 +125,7 @@ function RetailerDashboard() {
           <span className="stat-icon">📦</span>
           <div>
             <p>Total Requests</p>
-            <strong>{totalRequests}</strong>
+            <strong>{stats.total}</strong>
           </div>
         </div>
 
@@ -124,7 +133,7 @@ function RetailerDashboard() {
           <span className="stat-icon">⏳</span>
           <div>
             <p>Pending</p>
-            <strong>{pendingRequests}</strong>
+            <strong>{stats.pending}</strong>
           </div>
         </div>
 
@@ -132,7 +141,7 @@ function RetailerDashboard() {
           <span className="stat-icon">🚚</span>
           <div>
             <p>In Transit</p>
-            <strong>{inTransitRequests}</strong>
+            <strong>{stats.inTransit}</strong>
           </div>
         </div>
 
@@ -140,7 +149,7 @@ function RetailerDashboard() {
           <span className="stat-icon">✓</span>
           <div>
             <p>Delivered</p>
-            <strong>{deliveredRequests}</strong>
+            <strong>{stats.delivered}</strong>
           </div>
         </div>
       </section>
@@ -260,7 +269,9 @@ function RetailerDashboard() {
           </span>
         </div>
 
-        {deliveries.length === 0 ? (
+        {isFetching ? (
+          <p className="loading-state">Loading delivery requests...</p>
+        ) : deliveries.length === 0 ? (
           <div className="empty-state">
             <div>📭</div>
             <h3>No delivery requests yet</h3>
@@ -305,5 +316,3 @@ function RetailerDashboard() {
     </main>
   )
 }
-
-export default RetailerDashboard

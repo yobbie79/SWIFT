@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './DispatcherDashboard.css'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 function DeliveryCard({ delivery, riders, onAssignRider }) {
-  const [selectedRiderId, setSelectedRiderId] = useState('')
+  const [selectedRiderId, setSelectedRiderId] = useState(delivery.riderId || '')
 
   const {
     id,
@@ -63,9 +65,7 @@ function DeliveryCard({ delivery, riders, onAssignRider }) {
 
       <div className="assignment-area">
         <div>
-          <label htmlFor={`rider-select-${id}`}>
-            Assign Rider
-          </label>
+          <label htmlFor={`rider-select-${id}`}>Assign Rider</label>
 
           <select
             id={`rider-select-${id}`}
@@ -102,7 +102,7 @@ function RiderCard({ rider }) {
   return (
     <article className="rider-card">
       <div className="rider-avatar">
-        {name.charAt(0).toUpperCase()}
+        {name ? name.charAt(0).toUpperCase() : 'R'}
       </div>
 
       <div className="rider-info">
@@ -110,14 +110,12 @@ function RiderCard({ rider }) {
         <p>{email}</p>
       </div>
 
-      <span className="rider-available">
-        Available
-      </span>
+      <span className="rider-available">Available</span>
     </article>
   )
 }
 
-export default function DispatcherDashboard() {
+export default function DispatcherDashboard({ user }) {
   const [deliveries, setDeliveries] = useState([])
   const [riders, setRiders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -127,8 +125,8 @@ export default function DispatcherDashboard() {
     const fetchDashboardData = async () => {
       try {
         const [deliveriesRes, ridersRes] = await Promise.all([
-          fetch('http://localhost:3000/deliveries'),
-          fetch('http://localhost:3000/deliveries/riders'),
+          fetch(`${API_URL}/deliveries`),
+          fetch(`${API_URL}/deliveries/riders`),
         ])
 
         if (!deliveriesRes.ok || !ridersRes.ok) {
@@ -156,7 +154,7 @@ export default function DispatcherDashboard() {
   const handleAssignRider = async (deliveryId, riderId) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/deliveries/${deliveryId}/assign`,
+        `${API_URL}/deliveries/${deliveryId}/assign`,
         {
           method: 'PATCH',
           headers: {
@@ -176,9 +174,7 @@ export default function DispatcherDashboard() {
 
       setDeliveries((currentDeliveries) =>
         currentDeliveries.map((delivery) =>
-          delivery.id === updatedDelivery.id
-            ? updatedDelivery
-            : delivery
+          delivery.id === updatedDelivery.id ? updatedDelivery : delivery
         )
       )
 
@@ -188,6 +184,21 @@ export default function DispatcherDashboard() {
       alert('Could not assign rider')
     }
   }
+
+  const stats = useMemo(() => {
+    const total = deliveries.length
+    const pending = deliveries.filter(
+      (delivery) => delivery.status === 'PENDING'
+    ).length
+    const assigned = deliveries.filter(
+      (delivery) => delivery.riderId
+    ).length
+    const delivered = deliveries.filter(
+      (delivery) => delivery.status === 'DELIVERED'
+    ).length
+
+    return { total, pending, assigned, delivered }
+  }, [deliveries])
 
   if (isLoading) {
     return (
@@ -213,18 +224,6 @@ export default function DispatcherDashboard() {
     )
   }
 
-  const pendingDeliveries = deliveries.filter(
-    (delivery) => delivery.status === 'PENDING'
-  ).length
-
-  const assignedDeliveries = deliveries.filter(
-    (delivery) => delivery.riderId
-  ).length
-
-  const deliveredDeliveries = deliveries.filter(
-    (delivery) => delivery.status === 'DELIVERED'
-  ).length
-
   return (
     <main className="dispatcher-page">
       <header className="dispatcher-header">
@@ -232,6 +231,7 @@ export default function DispatcherDashboard() {
           <p className="dispatcher-brand">SWIFT</p>
           <h1>Dispatcher Dashboard</h1>
           <p className="dispatcher-subtitle">
+            {user?.name ? `Welcome, ${user.name}. ` : ''}
             Coordinate deliveries and assign riders efficiently.
           </p>
         </div>
@@ -247,7 +247,7 @@ export default function DispatcherDashboard() {
           <div className="dispatcher-stat-icon">📋</div>
           <div>
             <span>Total Deliveries</span>
-            <strong>{deliveries.length}</strong>
+            <strong>{stats.total}</strong>
           </div>
         </div>
 
@@ -255,7 +255,7 @@ export default function DispatcherDashboard() {
           <div className="dispatcher-stat-icon">⏳</div>
           <div>
             <span>Pending</span>
-            <strong>{pendingDeliveries}</strong>
+            <strong>{stats.pending}</strong>
           </div>
         </div>
 
@@ -263,7 +263,7 @@ export default function DispatcherDashboard() {
           <div className="dispatcher-stat-icon">🚴</div>
           <div>
             <span>Assigned</span>
-            <strong>{assignedDeliveries}</strong>
+            <strong>{stats.assigned}</strong>
           </div>
         </div>
 
@@ -271,7 +271,7 @@ export default function DispatcherDashboard() {
           <div className="dispatcher-stat-icon">✓</div>
           <div>
             <span>Delivered</span>
-            <strong>{deliveredDeliveries}</strong>
+            <strong>{stats.delivered}</strong>
           </div>
         </div>
       </section>
@@ -284,18 +284,14 @@ export default function DispatcherDashboard() {
               <p>Assign available riders to delivery requests.</p>
             </div>
 
-            <span className="panel-count">
-              {deliveries.length}
-            </span>
+            <span className="panel-count">{deliveries.length}</span>
           </div>
 
           {deliveries.length === 0 ? (
             <div className="empty-dispatcher">
               <div>📭</div>
               <h3>No delivery requests</h3>
-              <p>
-                New retailer requests will appear here.
-              </p>
+              <p>New retailer requests will appear here.</p>
             </div>
           ) : (
             <div className="delivery-list">
@@ -318,26 +314,19 @@ export default function DispatcherDashboard() {
               <p>Riders ready for assignment.</p>
             </div>
 
-            <span className="panel-count">
-              {riders.length}
-            </span>
+            <span className="panel-count">{riders.length}</span>
           </div>
 
           {riders.length === 0 ? (
             <div className="empty-dispatcher">
               <div>🚴</div>
               <h3>No riders available</h3>
-              <p>
-                Registered riders will appear here.
-              </p>
+              <p>Registered riders will appear here.</p>
             </div>
           ) : (
             <div className="rider-list">
               {riders.map((rider) => (
-                <RiderCard
-                  key={rider.id}
-                  rider={rider}
-                />
+                <RiderCard key={rider.id} rider={rider} />
               ))}
             </div>
           )}

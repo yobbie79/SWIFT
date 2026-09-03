@@ -1,172 +1,53 @@
-import { useEffect, useState } from 'react'
-import './RiderDashboard.css'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
-function DeliveryCard({ delivery, onUpdateStatus, onSubmitProof }) {
-  const [proofInput, setProofInput] = useState('')
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
-  const {
-    id,
-    customerName,
-    customerPhone,
-    deliveryAddress,
-    itemDescription,
-    status,
-    proofOfDelivery,
-  } = delivery
-
-  const handleProofSubmit = (e) => {
-    e.preventDefault()
-
-    if (!proofInput.trim()) {
-      alert('Please enter proof of delivery')
-      return
-    }
-
-    onSubmitProof(id, proofInput)
-    setProofInput('')
-  }
-
-  return (
-    <article className="rider-delivery-card">
-      <div className="rider-delivery-header">
-        <div>
-          <span className="rider-delivery-label">DELIVERY</span>
-          <h3>{customerName}</h3>
-        </div>
-
-        <span className={`rider-status status-${status?.toLowerCase()}`}>
-          {status}
-        </span>
-      </div>
-
-      <div className="rider-delivery-details">
-        <div className="rider-detail">
-          <span className="rider-detail-icon">📞</span>
-          <div>
-            <small>Customer Phone</small>
-            <strong>{customerPhone}</strong>
-          </div>
-        </div>
-
-        <div className="rider-detail">
-          <span className="rider-detail-icon">📍</span>
-          <div>
-            <small>Delivery Address</small>
-            <strong>{deliveryAddress}</strong>
-          </div>
-        </div>
-
-        <div className="rider-detail">
-          <span className="rider-detail-icon">📦</span>
-          <div>
-            <small>Item</small>
-            <strong>{itemDescription}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="rider-actions">
-        {status === 'ASSIGNED' && (
-          <button
-            type="button"
-            className="primary-rider-button"
-            onClick={() => onUpdateStatus(id, 'PICKED_UP')}
-          >
-            🚚 Mark as Picked Up
-          </button>
-        )}
-
-        {status === 'PICKED_UP' && (
-          <div className="delivery-completion">
-            <button
-              type="button"
-              className="delivered-button"
-              onClick={() => onUpdateStatus(id, 'DELIVERED')}
-            >
-              ✓ Mark as Delivered
-            </button>
-
-            <form
-              onSubmit={handleProofSubmit}
-              className="proof-form"
-            >
-              <label htmlFor={`proof-${id}`}>
-                Proof of Delivery
-              </label>
-
-              <div className="proof-input-row">
-                <input
-                  id={`proof-${id}`}
-                  type="text"
-                  placeholder="Enter proof or QR value"
-                  value={proofInput}
-                  onChange={(e) => setProofInput(e.target.value)}
-                />
-
-                <button type="submit">
-                  Submit Proof
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {status === 'DELIVERED' && (
-          <div className="proof-complete">
-            <span className="proof-check">✓</span>
-            <div>
-              <small>Proof of Delivery</small>
-              <strong>{proofOfDelivery || 'N/A'}</strong>
-            </div>
-          </div>
-        )}
-      </div>
-    </article>
-  )
-}
-
-export default function RiderDashboard({ user }) {
+function RiderDashboard({ user, onLogout }) {
   const [deliveries, setDeliveries] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [proof, setProof] = useState({})
+  const [actionLoading, setActionLoading] = useState({})
+
+  const fetchDeliveries = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const response = await fetch(`${API_URL}/deliveries`)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch deliveries')
+      }
+
+      const data = await response.json()
+
+      const assignedDeliveries = data.filter(
+        (delivery) => user?.id && delivery.riderId === user.id
+      )
+
+      setDeliveries(assignedDeliveries)
+    } catch (err) {
+      console.error(err)
+      setError('Unable to load deliveries.')
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id])
 
   useEffect(() => {
-    const fetchAssignedDeliveries = async () => {
-      if (!user?.id) {
-        setError('No logged-in rider found')
-        setIsLoading(false)
-        return
-      }
+    fetchDeliveries()
+  }, [fetchDeliveries])
 
-      try {
-        const response = await fetch('http://localhost:3000/deliveries')
+  const setDeliveryLoading = (id, isLoading) => {
+    setActionLoading((prev) => ({ ...prev, [id]: isLoading }))
+  }
 
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
-        }
-
-        const data = await response.json()
-
-        const riderDeliveries = data.filter(
-          (delivery) => delivery.riderId === user.id
-        )
-
-        setDeliveries(riderDeliveries)
-      } catch (err) {
-        console.error('Error loading deliveries:', err)
-        setError(err.message)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchAssignedDeliveries()
-  }, [user])
-
-  const handleUpdateStatus = async (deliveryId, status) => {
+  const updateStatus = async (deliveryId, status) => {
     try {
+      setDeliveryLoading(deliveryId, true)
       const response = await fetch(
-        `http://localhost:3000/deliveries/${deliveryId}/status`,
+        `${API_URL}/deliveries/${deliveryId}/status`,
         {
           method: 'PATCH',
           headers: {
@@ -183,29 +64,35 @@ export default function RiderDashboard({ user }) {
       const updatedDelivery = await response.json()
 
       setDeliveries((prev) =>
-        prev.map((delivery) =>
-          delivery.id === updatedDelivery.id
-            ? updatedDelivery
-            : delivery
-        )
+        prev.map((d) => (d.id === deliveryId ? { ...d, ...updatedDelivery, status } : d))
       )
     } catch (err) {
-      console.error('Error updating status:', err)
-      alert('Could not update status')
+      console.error(err)
+      alert('Unable to update delivery status.')
+    } finally {
+      setDeliveryLoading(deliveryId, false)
     }
   }
 
-  const handleSubmitProof = async (deliveryId, proofValue) => {
+  const submitProof = async (deliveryId) => {
+    const proofValue = proof[deliveryId]?.trim()
+
+    if (!proofValue) {
+      alert('Please enter proof of delivery.')
+      return
+    }
+
     try {
+      setDeliveryLoading(deliveryId, true)
       const response = await fetch(
-        `http://localhost:3000/deliveries/${deliveryId}/proof`,
+        `${API_URL}/deliveries/${deliveryId}/proof`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            proofOfDelivery: proofValue,
+            proof: proofValue,
           }),
         }
       )
@@ -216,128 +103,168 @@ export default function RiderDashboard({ user }) {
 
       const updatedDelivery = await response.json()
 
-      setDeliveries((prev) =>
-        prev.map((delivery) =>
-          delivery.id === updatedDelivery.id
-            ? updatedDelivery
-            : delivery
-        )
-      )
+      setProof((previous) => ({
+        ...previous,
+        [deliveryId]: '',
+      }))
 
-      alert('Proof submitted successfully')
+      setDeliveries((prev) =>
+        prev.map((d) => (d.id === deliveryId ? { ...d, ...updatedDelivery } : d))
+      )
+      alert('Proof of delivery submitted successfully.')
     } catch (err) {
-      console.error('Error submitting proof:', err)
-      alert('Could not submit proof of delivery')
+      console.error(err)
+      alert('Unable to submit proof of delivery.')
+    } finally {
+      setDeliveryLoading(deliveryId, false)
     }
   }
 
-  const assignedCount = deliveries.length
+  const stats = useMemo(() => {
+    const total = deliveries.length
+    const assigned = deliveries.filter((d) => d.status === 'ASSIGNED').length
+    const pickedUp = deliveries.filter((d) => d.status === 'PICKED_UP').length
+    const completed = deliveries.filter((d) => d.status === 'DELIVERED').length
 
-  const pickedUpCount = deliveries.filter(
-    (delivery) => delivery.status === 'PICKED_UP'
-  ).length
-
-  const deliveredCount = deliveries.filter(
-    (delivery) => delivery.status === 'DELIVERED'
-  ).length
+    return { total, assigned, pickedUp, completed }
+  }, [deliveries])
 
   return (
-    <main className="rider-page">
-      <header className="rider-header">
+    <div className="dashboard">
+      <header className="dashboard-header">
         <div>
-          <p className="rider-brand">SWIFT</p>
           <h1>Rider Dashboard</h1>
-          <p className="rider-subtitle">
-            Manage your assigned deliveries and update their progress.
-          </p>
+          <p>Welcome, {user?.name || 'Rider'}</p>
         </div>
 
-        <div className="rider-online-status">
-          <span className="rider-online-dot"></span>
-          Rider Online
-        </div>
+        <button onClick={onLogout}>Logout</button>
       </header>
 
-      <section className="rider-stats">
-        <div className="rider-stat-card">
-          <div className="rider-stat-icon">📦</div>
-          <div>
-            <span>My Deliveries</span>
-            <strong>{assignedCount}</strong>
+      <main className="dashboard-content">
+        <section className="stats-summary">
+          <div className="stat-card">
+            <span>Total Assigned</span>
+            <strong>{stats.total}</strong>
           </div>
-        </div>
-
-        <div className="rider-stat-card">
-          <div className="rider-stat-icon">🚚</div>
-          <div>
-            <span>Picked Up</span>
-            <strong>{pickedUpCount}</strong>
+          <div className="stat-card">
+            <span>Ready for Pickup</span>
+            <strong>{stats.assigned}</strong>
           </div>
-        </div>
-
-        <div className="rider-stat-card">
-          <div className="rider-stat-icon">✓</div>
-          <div>
-            <span>Delivered</span>
-            <strong>{deliveredCount}</strong>
+          <div className="stat-card">
+            <span>In Transit</span>
+            <strong>{stats.pickedUp}</strong>
           </div>
-        </div>
-      </section>
-
-      <section className="my-deliveries-card">
-        <div className="rider-section-heading">
-          <div>
-            <h2>My Deliveries</h2>
-            <p>
-              View your assigned deliveries and update their status.
-            </p>
+          <div className="stat-card">
+            <span>Completed</span>
+            <strong>{stats.completed}</strong>
           </div>
+        </section>
 
-          <span className="rider-count">
-            {deliveries.length}{' '}
-            {deliveries.length === 1 ? 'Delivery' : 'Deliveries'}
-          </span>
-        </div>
+        <section className="dashboard-card">
+          <h2>My Assigned Deliveries</h2>
 
-        {isLoading && (
-          <div className="rider-message">
-            <div className="message-icon">🚚</div>
-            <h3>Loading deliveries...</h3>
-            <p>Getting your assigned deliveries.</p>
-          </div>
-        )}
+          {loading && <p>Loading deliveries...</p>}
 
-        {error && (
-          <div className="rider-error">
-            <div>⚠️</div>
-            <h3>Unable to load deliveries</h3>
-            <p>{error}</p>
-          </div>
-        )}
+          {error && <p className="error-message">{error}</p>}
 
-        {!isLoading && !error && (
-          deliveries.length === 0 ? (
-            <div className="rider-message">
-              <div className="message-icon">📭</div>
-              <h3>No deliveries assigned yet</h3>
-              <p>
-                Your assigned deliveries will appear here.
-              </p>
+          {!loading && !error && deliveries.length === 0 && (
+            <p>No deliveries assigned to you yet.</p>
+          )}
+
+          {!loading && !error && deliveries.length > 0 && (
+            <div className="delivery-list">
+              {deliveries.map((delivery) => {
+                const isItemLoading = actionLoading[delivery.id]
+
+                return (
+                  <div className="delivery-card" key={delivery.id}>
+                    <h3>Delivery #{delivery.id}</h3>
+
+                    <p>
+                      <strong>Customer:</strong> {delivery.customerName}
+                    </p>
+
+                    <p>
+                      <strong>Phone:</strong> {delivery.customerPhone}
+                    </p>
+
+                    <p>
+                      <strong>Address:</strong> {delivery.deliveryAddress}
+                    </p>
+
+                    <p>
+                      <strong>Item:</strong> {delivery.itemDescription}
+                    </p>
+
+                    <p>
+                      <strong>Status:</strong>{' '}
+                      <span className={`status-${delivery.status?.toLowerCase()}`}>
+                        {delivery.status}
+                      </span>
+                    </p>
+
+                    {delivery.proof && (
+                      <p>
+                        <strong>Proof:</strong> {delivery.proof}
+                      </p>
+                    )}
+
+                    <div className="delivery-actions">
+                      {delivery.status === 'ASSIGNED' && (
+                        <button
+                          disabled={isItemLoading}
+                          onClick={() =>
+                            updateStatus(delivery.id, 'PICKED_UP')
+                          }
+                        >
+                          {isItemLoading ? 'Updating...' : 'Mark as Picked Up'}
+                        </button>
+                      )}
+
+                      {delivery.status === 'PICKED_UP' && (
+                        <>
+                          <button
+                            disabled={isItemLoading}
+                            onClick={() =>
+                              updateStatus(delivery.id, 'DELIVERED')
+                            }
+                          >
+                            {isItemLoading ? 'Updating...' : 'Mark as Delivered'}
+                          </button>
+
+                          <div className="proof-section">
+                            <input
+                              type="text"
+                              placeholder="Enter proof of delivery"
+                              value={proof[delivery.id] || ''}
+                              disabled={isItemLoading}
+                              onChange={(event) =>
+                                setProof((previous) => ({
+                                  ...previous,
+                                  [delivery.id]: event.target.value,
+                                }))
+                              }
+                            />
+
+                            <button
+                              disabled={isItemLoading}
+                              onClick={() => submitProof(delivery.id)}
+                            >
+                              {isItemLoading ? 'Submitting...' : 'Submit Proof'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          ) : (
-            <div className="rider-delivery-list">
-              {deliveries.map((delivery) => (
-                <DeliveryCard
-                  key={delivery.id}
-                  delivery={delivery}
-                  onUpdateStatus={handleUpdateStatus}
-                  onSubmitProof={handleSubmitProof}
-                />
-              ))}
-            </div>
-          )
-        )}
-      </section>
-    </main>
+          )}
+        </section>
+      </main>
+    </div>
   )
 }
+
+export default RiderDashboard

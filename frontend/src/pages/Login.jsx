@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import './Login.css'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default function Login({ role, onLogin, onBack }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -13,7 +15,7 @@ export default function Login({ role, onLogin, onBack }) {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:3000/auth/login', {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
