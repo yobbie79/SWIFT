@@ -1,23 +1,54 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+} from '@nestjs/common'
 import { DeliveryStatus } from '@prisma/client'
+import { IsEnum, IsInt, IsNotEmpty, IsString } from 'class-validator'
+import { Type } from 'class-transformer'
+
 import { DeliveriesService } from './deliveries.service'
 
 export class CreateDeliveryDto {
+  @IsString()
+  @IsNotEmpty()
   customerName: string
+
+  @IsString()
+  @IsNotEmpty()
   customerPhone: string
+
+  @IsString()
+  @IsNotEmpty()
   deliveryAddress: string
+
+  @IsString()
+  @IsNotEmpty()
   itemDescription: string
+
+  @Type(() => Number)
+  @IsInt()
+  retailerId: number
 }
 
 export class AssignRiderDto {
+  @Type(() => Number)
+  @IsInt()
   riderId: number
 }
 
 export class UpdateStatusDto {
+  @IsEnum(DeliveryStatus)
   status: DeliveryStatus
 }
 
 export class AddProofOfDeliveryDto {
+  @IsString()
+  @IsNotEmpty()
   proofOfDelivery: string
 }
 
@@ -61,6 +92,9 @@ export class DeliveriesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AddProofOfDeliveryDto,
   ) {
-    return this.deliveriesService.addProofOfDelivery(id, dto.proofOfDelivery)
+    return this.deliveriesService.addProofOfDelivery(
+      id,
+      dto.proofOfDelivery,
+    )
   }
 }

@@ -7,17 +7,23 @@ export interface CreateDeliveryDto {
   customerPhone: string
   deliveryAddress: string
   itemDescription: string
+  retailerId: number
 }
 
 @Injectable()
 export class DeliveriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateDeliveryDto, retailerId = 1) {
+  async create(data: CreateDeliveryDto) {
+    await this.ensureUserExists(data.retailerId)
+
     return this.prisma.delivery.create({
       data: {
-        ...data,
-        retailerId,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        deliveryAddress: data.deliveryAddress,
+        itemDescription: data.itemDescription,
+        retailerId: data.retailerId,
       },
     })
   }
@@ -27,7 +33,11 @@ export class DeliveriesService {
       orderBy: { createdAt: 'desc' },
       include: {
         rider: {
-          select: { id: true, name: true, email: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
     })
@@ -46,6 +56,7 @@ export class DeliveriesService {
 
   async assignRider(deliveryId: number, riderId: number) {
     await this.ensureDeliveryExists(deliveryId)
+    await this.ensureUserExists(riderId)
 
     return this.prisma.delivery.update({
       where: { id: deliveryId },
@@ -56,16 +67,24 @@ export class DeliveriesService {
     })
   }
 
-  async updateStatus(deliveryId: number, status: DeliveryStatus) {
+  async updateStatus(
+    deliveryId: number,
+    status: DeliveryStatus,
+  ) {
     await this.ensureDeliveryExists(deliveryId)
 
     return this.prisma.delivery.update({
       where: { id: deliveryId },
-      data: { status },
+      data: {
+        status,
+      },
     })
   }
 
-  async addProofOfDelivery(deliveryId: number, proofOfDelivery: string) {
+  async addProofOfDelivery(
+    deliveryId: number,
+    proofOfDelivery: string,
+  ) {
     await this.ensureDeliveryExists(deliveryId)
 
     return this.prisma.delivery.update({
@@ -85,7 +104,22 @@ export class DeliveriesService {
     })
 
     if (!delivery) {
-      throw new NotFoundException(`Delivery with ID ${id} not found`)
+      throw new NotFoundException(
+        `Delivery with ID ${id} not found`,
+      )
+    }
+  }
+
+  private async ensureUserExists(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    })
+
+    if (!user) {
+      throw new NotFoundException(
+        `User with ID ${id} not found`,
+      )
     }
   }
 }
